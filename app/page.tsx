@@ -1,11 +1,12 @@
 "use client";
-import ClientPage from "@/components/ClientPage";
+import dynamic from "next/dynamic";
+
+const PhaserGame = dynamic(() => import("@/components/PhaserGame"), { ssr: false });
 
 export default function Home() {
     return (
-        <main className="flex min-h-screen flex-col items-center justify-center p-24 bg-white">
-            <h1 className="text-4xl font-bold text-black">Hello World</h1>
-            <ClientPage />
+        <main style={{ margin: 0, padding: 0, overflow: 'hidden' }}>
+            <PhaserGame />
         </main>
     );
 }
