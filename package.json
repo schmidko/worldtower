@@ -1,0 +1,38 @@
+{
+  "name": "worldtower",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 8555",
+    "build": "next build",
+    "start": "next start -p 8555",
+    "lint": "eslint",
+    "compile": "npx hardhat compile",
+    "deploy:testnet": "APP_ENV=testnet npx tsx scripts/deploy_viem.ts",
+    "deploy:mainnet": "APP_ENV=mainnet npx tsx scripts/deploy_viem.ts"
+  },
+  "dependencies": {
+    "@worldcoin/minikit-js": "^1.9.9",
+    "@worldcoin/minikit-react": "^1.9.10",
+    "next": "16.1.1",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "viem": "^2.44.4"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^6.1.0",
+    "@openzeppelin/contracts": "^5.4.0",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "dotenv": "^17.2.3",
+    "eslint": "^9",
+    "eslint-config-next": "16.1.1",
+    "hardhat": "^2.26.0",
+    "tailwindcss": "^4",
+    "ts-node": "^10.9.2",
+    "typescript": "^5"
+  },
+  "type": "module"
+}
