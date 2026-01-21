@@ -1,5 +1,5 @@
-import Phaser from 'phaser';
-
 declare module 'phaser/dist/phaser.esm.js' {
-    export = Phaser;
+    import * as Phaser from 'phaser';
+    export default Phaser;
+    export * from 'phaser';
 }
