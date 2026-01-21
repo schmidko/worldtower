@@ -9,7 +9,8 @@ export default function PhaserGame() {
     useEffect(() => {
         const initGame = async () => {
             if (typeof window !== 'undefined' && gameRef.current && !gameInstanceRef.current) {
-                const Phaser = await import('phaser/dist/phaser.esm.js');
+                const PhaserModule = await import('phaser/dist/phaser.esm.js');
+                const Phaser = PhaserModule.default || PhaserModule;
                 const { GameScene } = await import('../game/GameScene');
                 const { UIScene } = await import('../game/UIScene');
                 const { WORLD_WIDTH, TOTAL_HEIGHT } = await import('../game/constants');
