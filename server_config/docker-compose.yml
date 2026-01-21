@@ -9,7 +9,7 @@ services:
       - "8555:8555"
     command: sh -c "npm i && npm run build && npm start"
     volumes:
-      - /var/www/worldroll:/app
+      - /var/www/worldtower:/app
     networks:
       - ows
     extra_hosts:
