@@ -10,58 +10,31 @@ export default function PhaserGame() {
         const initGame = async () => {
             if (typeof window !== 'undefined' && gameRef.current && !gameInstanceRef.current) {
                 const Phaser = await import('phaser/dist/phaser.esm.js');
-                const { MainScene } = await import('../game/MainScene');
-
-                const dpr = window.devicePixelRatio || 1;
-
-                // Use full viewport size
-                const baseWidth = window.innerWidth;
-                const baseHeight = window.innerHeight;
+                const { GameScene } = await import('../game/GameScene');
+                const { UIScene } = await import('../game/UIScene');
+                const { WORLD_WIDTH, TOTAL_HEIGHT } = await import('../game/constants');
 
                 const config = {
-                    type: Phaser.CANVAS,
-                    width: baseWidth * dpr,
-                    height: baseHeight * dpr,
+                    type: Phaser.AUTO,
+                    width: WORLD_WIDTH,      // 720
+                    height: TOTAL_HEIGHT,    // 1280 (1000 game + 280 UI)
                     parent: gameRef.current!,
                     backgroundColor: '#000000',
-                    scene: [MainScene],
+                    scene: [GameScene, UIScene],
                     scale: {
-                        mode: Phaser.Scale.NONE,
-                        autoCenter: Phaser.Scale.NO_CENTER,
+                        mode: Phaser.Scale.EXPAND,
+                        autoCenter: Phaser.Scale.CENTER_BOTH,
                     },
                     render: {
                         antialias: true,
-                        crisp: true,
+                        pixelArt: false,
                     }
                 };
 
                 gameInstanceRef.current = new Phaser.Game(config);
 
-                // Scale canvas with CSS
-                const canvas = gameRef.current.querySelector('canvas');
-                if (canvas) {
-                    canvas.style.width = `${baseWidth}px`;
-                    canvas.style.height = `${baseHeight}px`;
-                }
-
-                // Handle window resize
-                const handleResize = () => {
-                    if (gameInstanceRef.current) {
-                        const newWidth = window.innerWidth;
-                        const newHeight = window.innerHeight;
-                        gameInstanceRef.current.scale.resize(newWidth * dpr, newHeight * dpr);
-                        const canvas = gameRef.current?.querySelector('canvas');
-                        if (canvas) {
-                            canvas.style.width = `${newWidth}px`;
-                            canvas.style.height = `${newHeight}px`;
-                        }
-                    }
-                };
-
-                window.addEventListener('resize', handleResize);
-
-                // Store cleanup function
-                (gameInstanceRef.current as any)._resizeHandler = handleResize;
+                // Start UI scene in parallel
+                gameInstanceRef.current.scene.start('UIScene');
             }
         };
 
@@ -69,10 +42,6 @@ export default function PhaserGame() {
 
         return () => {
             if (gameInstanceRef.current) {
-                const handler = (gameInstanceRef.current as any)._resizeHandler;
-                if (handler) {
-                    window.removeEventListener('resize', handler);
-                }
                 gameInstanceRef.current.destroy(true);
                 gameInstanceRef.current = null;
             }
