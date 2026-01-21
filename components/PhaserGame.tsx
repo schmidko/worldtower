@@ -9,8 +9,7 @@ export default function PhaserGame() {
     useEffect(() => {
         const initGame = async () => {
             if (typeof window !== 'undefined' && gameRef.current && !gameInstanceRef.current) {
-                const PhaserModule = await import('phaser/dist/phaser.esm.js');
-                const Phaser = PhaserModule.default || PhaserModule;
+                const Phaser = (await import('phaser')).default;
                 const { GameScene } = await import('../game/GameScene');
                 const { UIScene } = await import('../game/UIScene');
                 const { WORLD_WIDTH, TOTAL_HEIGHT } = await import('../game/constants');
@@ -31,11 +30,17 @@ export default function PhaserGame() {
                         pixelArt: false,
                     }
                 };
+                console.log('Creating Phaser game...');
+                console.log('GameScene:', GameScene);
+                console.log('UIScene:', UIScene);
 
                 gameInstanceRef.current = new Phaser.Game(config);
+                console.log('Game created, starting scenes...');
 
-                // Start UI scene in parallel
+                // Explicitly start both scenes
+                gameInstanceRef.current.scene.start('GameScene');
                 gameInstanceRef.current.scene.start('UIScene');
+                console.log('Scenes started');
             }
         };
 

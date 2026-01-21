@@ -13,10 +13,12 @@ export class GameScene extends Phaser.Scene {
     }
 
     create() {
+        console.log('GameScene create() called');
         this.levelLoader = new LevelLoader(this);
 
         // Center camera on the fixed world
         this.centerCamera();
+        console.log('Camera centered');
 
         // Recenter camera on resize
         this.scale.on('resize', this.centerCamera, this);
