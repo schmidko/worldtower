@@ -1,5 +1,5 @@
 // UIScene.ts - Fixed 280px UI at bottom of screen
-import * as Phaser from 'phaser/dist/phaser.esm.js';
+import Phaser from 'phaser';
 import { UI_HEIGHT } from './constants';
 
 export class UIScene extends Phaser.Scene {

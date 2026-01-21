@@ -1,5 +1,5 @@
 // LevelLoader.ts - Handles loading level and sprite data from JSON
-import * as Phaser from 'phaser/dist/phaser.esm.js';
+import Phaser from 'phaser';
 
 export interface SpriteFrame {
     x: number;

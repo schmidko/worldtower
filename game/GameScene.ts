@@ -1,5 +1,5 @@
 // GameScene.ts - Uses fixed 720x1000 world from constants
-import * as Phaser from 'phaser/dist/phaser.esm.js';
+import Phaser from 'phaser';
 import { WORLD_WIDTH, WORLD_HEIGHT, WORLD_CENTER_X, WORLD_CENTER_Y, UI_HEIGHT } from './constants';
 import { LevelLoader, SpriteDefinition } from './LevelLoader';
 
