@@ -1,0 +1,5 @@
+[aws]
+worldtower ansible_host=r01
+
+[aws:vars]
+ansible_python_interpreter=/usr/bin/python3

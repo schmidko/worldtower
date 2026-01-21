@@ -1,0 +1,48 @@
+
+---
+- hosts: worldtower
+  remote_user: mog
+  vars_prompt:
+    - name: "ansible_become_pass"
+      prompt: "Sudo password"
+      private: yes
+  become: yes
+  become_flags: "-E"
+  gather_facts: yes
+
+  tasks:
+
+    - name: Delete directory
+      file:
+        state: absent
+        path: "/var/www/worldtower"
+
+    - name: Create directory
+      file:
+        path: "/var/www/worldtower"
+        state: directory
+
+    - name: Clone git repository
+      git:
+        repo: "git@github.com:schmidko/worldtower.git"
+        version: "main"
+        dest: "/var/www/worldtower/"
+        force: yes
+        accept_hostkey: yes
+      
+    - name: Copy env
+      copy:
+        src: "/home/mog/env/worldtower/.env"
+        dest: "/var/www/worldtower/.env"
+        remote_src: true
+
+    - name: Stop container
+      shell:
+        cmd: "docker compose -f /var/www/worldtower/server_config/docker-compose.yml down"
+        chdir: /var/www/worldtower/
+      ignore_errors: yes
+
+    - name: Run container
+      shell:
+        cmd: "docker compose -f /var/www/worldtower/server_config/docker-compose.yml up --detach"
+        chdir: /var/www/worldtower/

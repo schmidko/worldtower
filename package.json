@@ -8,6 +8,7 @@
     "start": "next start -p 8555",
     "lint": "eslint",
     "compile": "npx hardhat compile",
+    "deploy:server": "ansible-playbook -i server_config/inventory.yml server_config/deploy.yml",
     "deploy:testnet": "APP_ENV=testnet npx tsx scripts/deploy_viem.ts",
     "deploy:mainnet": "APP_ENV=mainnet npx tsx scripts/deploy_viem.ts"
   },
