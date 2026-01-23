@@ -32,6 +32,7 @@ export interface EnemySpawn {
     time: number;
     angle: number;
     scale?: number; // Optional scaling factor
+    speed?: number; // Pixels per second
 }
 
 export interface LevelData {
@@ -89,5 +90,92 @@ export class LevelLoader {
             console.error('Error loading sprite:', error);
             return null;
         }
+    }
+
+    /**
+         * Helper to generate a texture from a sprite definition if it doesn't exist yet.
+         * Returns the texture key.
+         */
+    generateTexture(id: number, spriteDef: SpriteDefinition): string {
+        const key = `sprite_${id}`;
+
+        if (this.scene.textures.exists(key)) {
+            return key;
+        }
+
+        // Create a temporary graphics object to draw the sprite
+        // We need ample space for the glow
+        const size = 100; // Assumed max size
+        const center = size / 2;
+
+        const container = this.scene.make.container({ x: 0, y: 0 });
+
+        // Helper to draw points
+        const drawOnGraphics = (gfx: Phaser.GameObjects.Graphics, points: { x: number, y: number }[]) => {
+            if (points.length > 0) {
+                gfx.beginPath();
+                gfx.moveTo(points[0].x, points[0].y);
+                for (let i = 1; i < points.length; i++) {
+                    gfx.lineTo(points[i].x, points[i].y);
+                }
+                gfx.closePath();
+                gfx.strokePath();
+            }
+        };
+
+        // 1. Glow Layer
+        if (spriteDef.glow) {
+            const glowGfx = this.scene.make.graphics({}, false);
+            const glowColor = parseInt(spriteDef.glow.color, 16);
+            glowGfx.lineStyle(2, glowColor, 1);
+
+            if (spriteDef.layers) {
+                for (const layer of spriteDef.layers) drawOnGraphics(glowGfx, layer.points);
+            } else if (spriteDef.points) {
+                drawOnGraphics(glowGfx, spriteDef.points);
+            }
+
+            // Apply Glow FX (High quality is fine here as it's only done once)
+            glowGfx.postFX.addGlow(
+                glowColor,
+                spriteDef.glow.outerStrength ?? 4,
+                spriteDef.glow.strength ?? 0,
+                false,
+                0.1,
+                10
+            );
+
+            container.add(glowGfx);
+        }
+
+        // 2. Core Layer
+        const coreGfx = this.scene.make.graphics({}, false);
+        if (spriteDef.layers) {
+            for (const layer of spriteDef.layers) {
+                coreGfx.lineStyle(layer.lineWidth ?? 2, parseInt(layer.color, 16), layer.alpha ?? 1);
+                drawOnGraphics(coreGfx, layer.points);
+            }
+        } else if (spriteDef.points) {
+            coreGfx.lineStyle(spriteDef.lineWidth || 2, parseInt(spriteDef.color || '0xffffff', 16), 1);
+            drawOnGraphics(coreGfx, spriteDef.points);
+        }
+        container.add(coreGfx);
+
+        // Snapshot the container to a texture
+        // We need to ensure the container bounds cover the graphics
+        // Since graphics are centered around 0,0, we render it centered in the texture
+        const texture = this.scene.add.renderTexture(0, 0, size, size);
+
+        // Center the container in the texture
+        container.setPosition(center, center);
+
+        texture.draw(container);
+        texture.saveTexture(key); // Register in TextureManager
+
+        // Cleanup
+        container.destroy();
+        texture.destroy(); // destroying the RenderTexture object, but the key remains in TextureManager
+
+        return key;
     }
 }

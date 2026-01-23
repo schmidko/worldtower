@@ -37,90 +37,71 @@ export class GameScene extends Phaser.Scene {
         if (levelData && levelData.enemy) {
             console.log(`Loaded Level ${levelData.level} with ${levelData.enemy.length} enemies`);
 
-            // Spawn each enemy
+            // 1. Preload all required sprites
+            const uniqueSpriteIds = new Set(levelData.enemy.map(e => e.id));
+            for (const id of uniqueSpriteIds) {
+                await this.levelLoader.loadSprite(id);
+            }
+
+            console.log(`Starting Level ${levelData.level}...`);
+
+            // 2. Schedule Spawns
             for (const enemySpawn of levelData.enemy) {
-                const spriteDef = await this.levelLoader.loadSprite(enemySpawn.id);
-                if (spriteDef) {
-                    this.spawnEnemy(enemySpawn.angle, spriteDef, enemySpawn.scale || 1);
-                }
+                // time is in seconds, convert to ms
+                const delay = enemySpawn.time * 1000;
+
+                this.time.delayedCall(delay, async () => {
+                    const spriteDef = await this.levelLoader!.loadSprite(enemySpawn.id);
+                    if (spriteDef) {
+                        this.spawnEnemy(enemySpawn.angle, enemySpawn.id, spriteDef, enemySpawn.scale || 1, enemySpawn.speed || 0);
+                    }
+                });
             }
         }
     }
 
-    spawnEnemy(angleDeg: number, spriteDef: SpriteDefinition, scale: number = 1) {
-        // Convert angle to radians relative to top
-        const radius = 300;
+    spawnEnemy(angleDeg: number, enemyId: number, spriteDef: SpriteDefinition, scale: number = 1, speed: number = 0) {
+        // Convert angle to radians (0 is top/up, -90 in math terms relative to 0 being right)
+        // Adjusting for standard clock-wise usage where 0 is UP
         const angleRad = (angleDeg - 90) * (Math.PI / 180);
 
-        const x = WORLD_CENTER_X + Math.cos(angleRad) * radius;
-        const y = WORLD_CENTER_Y + Math.sin(angleRad) * radius;
+        // Calculate spawn position at the edge of the screen + margin
+        // Screen Bounds
+        const margin = 50; // Extra buffer for sprite size
+        const w = WORLD_WIDTH;
+        const h = WORLD_HEIGHT;
 
-        // Container to hold both glow and core graphics
-        const container = this.add.container(x, y);
-        container.setScale(scale);
+        // Center position
+        const cx = WORLD_CENTER_X;
+        const cy = WORLD_CENTER_Y;
 
-        // Helper to draw points on a graphics object
-        const drawOnGraphics = (gfx: Phaser.GameObjects.Graphics, points: { x: number, y: number }[], isGlow: boolean = false) => {
-            if (points.length > 0) {
-                gfx.beginPath();
-                gfx.moveTo(points[0].x, points[0].y);
-                for (let i = 1; i < points.length; i++) {
-                    gfx.lineTo(points[i].x, points[i].y);
-                }
-                gfx.closePath();
-                gfx.strokePath();
-            }
-        };
+        // Direction vector
+        const dx = Math.cos(angleRad);
+        const dy = Math.sin(angleRad);
 
-        // 1. Draw Glow Layer (if glow is defined)
-        if (spriteDef.glow) {
-            const glowGfx = this.make.graphics({}, false);
-            const glowColor = parseInt(spriteDef.glow.color, 16);
+        // Ray vs AABB Intersection (Center to Edge)
+        let t = Infinity;
 
-            // Draw all layers/points onto the glow graphics
-            glowGfx.lineStyle(2, glowColor, 1); // Thicker line for better glow
+        // Right Wall (x = w)
+        if (dx > 0) t = Math.min(t, (w + margin - cx) / dx);
+        // Left Wall (x = 0)
+        if (dx < 0) t = Math.min(t, (-margin - cx) / dx);
+        // Bottom Wall (y = h)
+        if (dy > 0) t = Math.min(t, (h + margin - cy) / dy);
+        // Top Wall (y = 0)
+        if (dy < 0) t = Math.min(t, (-margin - cy) / dy);
 
-            if (spriteDef.layers) {
-                for (const layer of spriteDef.layers) {
-                    drawOnGraphics(glowGfx, layer.points);
-                }
-            } else if (spriteDef.points) {
-                drawOnGraphics(glowGfx, spriteDef.points);
-            }
+        const x = cx + dx * t;
+        const y = cy + dy * t;
 
-            // Apply Glow FX
-            glowGfx.postFX.addGlow(
-                glowColor,
-                spriteDef.glow.outerStrength ?? 4,
-                spriteDef.glow.strength ?? 0,
-                false,
-                0.1,
-                24
-            );
+        // Optimized: Use Pre-rendered Texture
+        const textureKey = this.levelLoader!.generateTexture(enemyId, spriteDef);
 
-            container.add(glowGfx);
-        }
+        const enemy = this.add.image(x, y, textureKey);
+        enemy.setScale(scale);
+        enemy.setData('speed', speed);
 
-        // 2. Draw Core Layer (Normal appearance)
-        const coreGfx = this.make.graphics({}, false);
-
-        if (spriteDef.layers && spriteDef.layers.length > 0) {
-            for (const layer of spriteDef.layers) {
-                const color = parseInt(layer.color, 16);
-                coreGfx.lineStyle(layer.lineWidth ?? 2, color, layer.alpha ?? 1);
-                drawOnGraphics(coreGfx, layer.points);
-            }
-        } else if (spriteDef.points) {
-            const color = parseInt(spriteDef.color || '0xffffff', 16);
-            coreGfx.lineStyle(spriteDef.lineWidth || 2, color, 1);
-            drawOnGraphics(coreGfx, spriteDef.points);
-        }
-
-        container.add(coreGfx);
-
-        // Store container instead of just graphics
-        // Note: this.enemies type change might be needed or just cast as any for list
-        this.enemies.push(container as any);
+        this.enemies.push(enemy as any);
     }
 
     createTower() {
@@ -176,7 +157,42 @@ export class GameScene extends Phaser.Scene {
         cam.centerOn(WORLD_CENTER_X, WORLD_CENTER_Y);
     }
 
-    update() {
-        // Tower is static
+    update(time: number, delta: number) {
+        // Iterate backwards to safely remove enemies
+        for (let i = this.enemies.length - 1; i >= 0; i--) {
+            const enemy = this.enemies[i];
+
+            // Check if enemy is active
+            if (!enemy.active) {
+                this.enemies.splice(i, 1);
+                continue;
+            }
+
+            const speed = enemy.getData('speed') as number;
+
+            if (speed > 0) {
+                // Calculate distance to center
+                const dx = WORLD_CENTER_X - enemy.x;
+                const dy = WORLD_CENTER_Y - enemy.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                // Check if reached center (threshold)
+                if (dist < 5) {
+                    enemy.destroy();
+                    this.enemies.splice(i, 1);
+                } else {
+                    // Move towards center
+                    // delta is in ms, speed is px/s -> distance = speed * (delta/1000)
+                    const moveDist = speed * (delta / 1000);
+
+                    // Normalize vector and scale by move distance
+                    const moveX = (dx / dist) * moveDist;
+                    const moveY = (dy / dist) * moveDist;
+
+                    enemy.x += moveX;
+                    enemy.y += moveY;
+                }
+            }
+        }
     }
 }
