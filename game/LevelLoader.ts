@@ -96,8 +96,8 @@ export class LevelLoader {
          * Helper to generate a texture from a sprite definition if it doesn't exist yet.
          * Returns the texture key.
          */
-    generateTexture(id: number, spriteDef: SpriteDefinition): string {
-        const key = `sprite_${id}`;
+    generateTexture(id: number, spriteDef: SpriteDefinition, scale: number = 1): string {
+        const key = `sprite_${id}_s${scale}`;
 
         if (this.scene.textures.exists(key)) {
             return key;
@@ -105,7 +105,7 @@ export class LevelLoader {
 
         // Create a temporary graphics object to draw the sprite
         // We need ample space for the glow
-        const size = 100; // Assumed max size
+        const size = 100 * scale + 20; // Dynamic size based on scale (No glow)
         const center = size / 2;
 
         const container = this.scene.make.container({ x: 0, y: 0 });
@@ -114,39 +114,16 @@ export class LevelLoader {
         const drawOnGraphics = (gfx: Phaser.GameObjects.Graphics, points: { x: number, y: number }[]) => {
             if (points.length > 0) {
                 gfx.beginPath();
-                gfx.moveTo(points[0].x, points[0].y);
+                gfx.moveTo(points[0].x * scale, points[0].y * scale);
                 for (let i = 1; i < points.length; i++) {
-                    gfx.lineTo(points[i].x, points[i].y);
+                    gfx.lineTo(points[i].x * scale, points[i].y * scale);
                 }
                 gfx.closePath();
                 gfx.strokePath();
             }
         };
 
-        // 1. Glow Layer
-        if (spriteDef.glow) {
-            const glowGfx = this.scene.make.graphics({}, false);
-            const glowColor = parseInt(spriteDef.glow.color, 16);
-            glowGfx.lineStyle(2, glowColor, 1);
-
-            if (spriteDef.layers) {
-                for (const layer of spriteDef.layers) drawOnGraphics(glowGfx, layer.points);
-            } else if (spriteDef.points) {
-                drawOnGraphics(glowGfx, spriteDef.points);
-            }
-
-            // Apply Glow FX (High quality is fine here as it's only done once)
-            glowGfx.postFX.addGlow(
-                glowColor,
-                spriteDef.glow.outerStrength ?? 4,
-                spriteDef.glow.strength ?? 0,
-                false,
-                0.1,
-                10
-            );
-
-            container.add(glowGfx);
-        }
+        // Glow Layer removed as requested
 
         // 2. Core Layer
         const coreGfx = this.scene.make.graphics({}, false);

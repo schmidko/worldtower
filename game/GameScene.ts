@@ -95,10 +95,12 @@ export class GameScene extends Phaser.Scene {
         const y = cy + dy * t;
 
         // Optimized: Use Pre-rendered Texture
-        const textureKey = this.levelLoader!.generateTexture(enemyId, spriteDef);
+        // Pass scale here so line width is properly handled (constant width)
+        const textureKey = this.levelLoader!.generateTexture(enemyId, spriteDef, scale);
 
         const enemy = this.add.image(x, y, textureKey);
-        enemy.setScale(scale);
+        // Important: setScale must be 1 because texture is already scaled!
+        enemy.setScale(1);
         enemy.setData('speed', speed);
 
         this.enemies.push(enemy as any);
