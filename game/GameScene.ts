@@ -2,11 +2,21 @@
 import Phaser from 'phaser';
 import { WORLD_WIDTH, WORLD_HEIGHT, WORLD_CENTER_X, WORLD_CENTER_Y, UI_HEIGHT } from './constants';
 import { LevelLoader } from './LevelLoader';
+import { DefaultPlayerStats } from './PlayerConfig';
+
+interface Bullet {
+    graphic: Phaser.GameObjects.Rectangle;
+    vx: number;
+    vy: number;
+    active: boolean;
+}
 
 export class GameScene extends Phaser.Scene {
     private tower: Phaser.GameObjects.Graphics | null = null;
     private levelLoader: LevelLoader | null = null;
     private enemies: Phaser.GameObjects.Image[] = [];
+    private bullets: Bullet[] = [];
+    private lastFired: number = 0;
 
     constructor() {
         super('GameScene');
@@ -50,13 +60,14 @@ export class GameScene extends Phaser.Scene {
                 this.time.delayedCall(delay, () => {
                     const textureKey = this.levelLoader!.getTextureKey(enemySpawn.id);
                     const scale = enemySpawn.scale || 1;
-                    this.spawnEnemy(enemySpawn.angle, textureKey, scale, enemySpawn.speed || 0);
+                    const lp = enemySpawn.lp || DefaultPlayerStats.lp;
+                    this.spawnEnemy(enemySpawn.angle, textureKey, scale, enemySpawn.speed || 0, lp);
                 });
             }
         }
     }
 
-    spawnEnemy(angleDeg: number, textureKey: string, scale: number = 1, speed: number = 0) {
+    spawnEnemy(angleDeg: number, textureKey: string, scale: number = 1, speed: number = 0, lp: number = 100) {
         // Convert angle to radians (0 is right, 90 is down, -90 is up)
         const angleRad = angleDeg * (Math.PI / 180);
 
@@ -88,6 +99,7 @@ export class GameScene extends Phaser.Scene {
         const enemy = this.add.image(x, y, textureKey);
         enemy.setScale(scale); // Apply scale from level data
         enemy.setData('speed', speed);
+        enemy.setData('lp', lp);
 
         this.enemies.push(enemy);
     }
@@ -135,6 +147,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     update(time: number, delta: number) {
+        // --- Enemy Update ---
         for (let i = this.enemies.length - 1; i >= 0; i--) {
             const enemy = this.enemies[i];
 
@@ -163,5 +176,110 @@ export class GameScene extends Phaser.Scene {
                 }
             }
         }
+
+        // --- Tower Shooting Logic ---
+        const fireInterval = 1000 / DefaultPlayerStats.bulletpersecond;
+        if (time > this.lastFired + fireInterval) {
+            // Find nearest enemy within range
+            let nearestEnemy: Phaser.GameObjects.Image | null = null;
+            let minDist = DefaultPlayerStats.bulletdistance; // Use configured range
+
+            for (const enemy of this.enemies) {
+                const dx = enemy.x - WORLD_CENTER_X;
+                const dy = enemy.y - WORLD_CENTER_Y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist <= minDist) {
+                    minDist = dist;
+                    nearestEnemy = enemy;
+                }
+            }
+
+            if (nearestEnemy) {
+                this.fireBullet(nearestEnemy);
+                this.lastFired = time;
+            }
+        }
+
+        // --- Bullet Update ---
+        const bulletSpeed = DefaultPlayerStats.bulletspeed; // Pixels per second
+        for (let i = this.bullets.length - 1; i >= 0; i--) {
+            const bullet = this.bullets[i];
+
+            if (!bullet.active) {
+                this.bullets.splice(i, 1);
+                continue;
+            }
+
+            // Move bullet
+            const moveDist = bulletSpeed * (delta / 1000);
+            bullet.graphic.x += bullet.vx * moveDist;
+            bullet.graphic.y += bullet.vy * moveDist;
+
+            // Check collision with enemies
+            let hit = false;
+            for (let j = this.enemies.length - 1; j >= 0; j--) {
+                const enemy = this.enemies[j];
+                const dx = bullet.graphic.x - enemy.x;
+                const dy = bullet.graphic.y - enemy.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                // Collision radius reduced to 10px (inner square radius) to match visual 'core'
+                if (dist < 10 * enemy.scale) {
+                    // HIT!
+                    hit = true;
+
+                    // Damage Enemy
+                    const currentLp = enemy.getData('lp') as number;
+                    const newLp = currentLp - DefaultPlayerStats.damage;
+                    enemy.setData('lp', newLp);
+                    console.log(`Enemy hit! LP: ${newLp}`);
+
+                    if (newLp <= 0) {
+                        enemy.destroy();
+                        this.enemies.splice(j, 1);
+                        console.log('Enemy destroyed!');
+                    }
+
+                    // Destroy Bullet
+                    bullet.graphic.destroy();
+                    bullet.active = false;
+                    break; // Bullet hits only one enemy
+                }
+            }
+
+            // Cleanup bullets that fly too far (e.g. out of world bounds)
+            if (!hit) {
+                const dx = bullet.graphic.x - WORLD_CENTER_X;
+                const dy = bullet.graphic.y - WORLD_CENTER_Y;
+                if (Math.sqrt(dx * dx + dy * dy) > WORLD_WIDTH) { // Safe cleanup distance
+                    bullet.graphic.destroy();
+                    bullet.active = false;
+                }
+            }
+        }
+    }
+
+    fireBullet(target: Phaser.GameObjects.Image) {
+        // Calculate direction to target
+        const dx = target.x - WORLD_CENTER_X;
+        const dy = target.y - WORLD_CENTER_Y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist === 0) return; // Should not happen if outside tower
+
+        const dirX = dx / dist;
+        const dirY = dy / dist;
+
+        // Create bullet at tower center
+        const bulletGraphic = this.add.rectangle(WORLD_CENTER_X, WORLD_CENTER_Y, 4, 4, 0xffffff);
+        bulletGraphic.setDepth(100);
+
+        this.bullets.push({
+            graphic: bulletGraphic,
+            vx: dirX,
+            vy: dirY,
+            active: true
+        });
     }
 }

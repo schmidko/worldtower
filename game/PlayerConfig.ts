@@ -5,6 +5,8 @@ export interface PlayerStats {
     critdamage: number;  // Critical hit damage in %
     bulletpersecond: number;
     bulletdistance: number;
+    bulletspeed: number;
+
 }
 
 export const DefaultPlayerStats: PlayerStats = {
@@ -13,5 +15,6 @@ export const DefaultPlayerStats: PlayerStats = {
     crit: 5,
     critdamage: 150,
     bulletpersecond: 2,
-    bulletdistance: 300
+    bulletdistance: 300,
+    bulletspeed: 200
 };
