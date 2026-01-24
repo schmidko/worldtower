@@ -1,38 +1,13 @@
-// LevelLoader.ts - Handles loading level and sprite data from JSON
+// LevelLoader.ts - Handles loading level and sprite data from JSON/SVG
 import Phaser from 'phaser';
 
-export interface SpriteFrame {
-    x: number;
-    y: number;
-}
-
-export interface SpriteLayer {
-    points: SpriteFrame[];
-    color: string;
-    alpha?: number;
-    lineWidth?: number;
-}
-
-export interface SpriteDefinition {
-    name: string;
-    points?: SpriteFrame[]; // Legacy support
-    color?: string;         // Legacy support
-    lineWidth?: number;     // Legacy support
-    layers?: SpriteLayer[]; // New multi-layer support
-    glow?: {                // Glow effect support
-        color: string;
-        strength?: number;
-        outerStrength?: number;
-    };
-}
-
 export interface EnemySpawn {
-    id: number;
+    id: string;  // Changed from number to string (e.g., "s001")
     lp: number;
     time: number;
     angle: number;
-    scale?: number; // Optional scaling factor
-    speed?: number; // Pixels per second
+    scale?: number;
+    speed?: number;
 }
 
 export interface LevelData {
@@ -42,7 +17,7 @@ export interface LevelData {
 
 export class LevelLoader {
     private scene: Phaser.Scene;
-    private spriteCache: Map<number, SpriteDefinition> = new Map();
+    private loadedTextures: Set<string> = new Set();
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
@@ -69,90 +44,83 @@ export class LevelLoader {
     }
 
     /**
-     * Load a sprite definition by ID (e.g. 1001 -> 1001.json)
-     * Caches loaded sprites to avoid re-fetching
+     * Load an SVG sprite and create a texture for it.
+     * SVG is always loaded at base size - scaling is applied at spawn time.
+     * @param id - Sprite ID (e.g., "s001")
+     * @returns Texture key or null if failed
      */
-    async loadSprite(id: number): Promise<SpriteDefinition | null> {
-        if (this.spriteCache.has(id)) {
-            return this.spriteCache.get(id)!;
-        }
+    async loadSVGSprite(id: string): Promise<string | null> {
+        const key = `sprite_${id}`;
 
-        const path = `/gamedata/sprites/${id}.json`;
-
-        try {
-            const response = await fetch(path);
-            if (!response.ok) throw new Error(`Failed to load sprite ${id}`);
-
-            const data = await response.json();
-            this.spriteCache.set(id, data);
-            return data as SpriteDefinition;
-        } catch (error) {
-            console.error('Error loading sprite:', error);
-            return null;
-        }
-    }
-
-    /**
-         * Helper to generate a texture from a sprite definition if it doesn't exist yet.
-         * Returns the texture key.
-         */
-    generateTexture(id: number, spriteDef: SpriteDefinition, scale: number = 1): string {
-        const key = `sprite_${id}_s${scale}`;
-
-        if (this.scene.textures.exists(key)) {
+        // Return cached texture key if already loaded
+        if (this.loadedTextures.has(key)) {
             return key;
         }
 
-        // Create a temporary graphics object to draw the sprite
-        // We need ample space for the glow
-        const size = 100 * scale + 20; // Dynamic size based on scale (No glow)
-        const center = size / 2;
+        const path = `/gamedata/sprites/${id}.svg`;
 
-        const container = this.scene.make.container({ x: 0, y: 0 });
+        return new Promise((resolve) => {
+            // Check if texture already exists in Phaser's texture manager
+            if (this.scene.textures.exists(key)) {
+                this.loadedTextures.add(key);
+                resolve(key);
+                return;
+            }
 
-        // Helper to draw points
-        const drawOnGraphics = (gfx: Phaser.GameObjects.Graphics, points: { x: number, y: number }[]) => {
-            if (points.length > 0) {
-                gfx.beginPath();
-                gfx.moveTo(points[0].x * scale, points[0].y * scale);
-                for (let i = 1; i < points.length; i++) {
-                    gfx.lineTo(points[i].x * scale, points[i].y * scale);
+            // Load SVG at base size (scaling applied at spawn time)
+            this.scene.load.svg(key, path);
+
+            // Handle load complete
+            this.scene.load.once('complete', () => {
+                if (this.scene.textures.exists(key)) {
+                    this.loadedTextures.add(key);
+                    console.log(`Loaded SVG sprite: ${key}`);
+                    resolve(key);
+                } else {
+                    console.error(`Failed to create texture for ${id}`);
+                    resolve(null);
                 }
-                gfx.closePath();
-                gfx.strokePath();
-            }
-        };
+            });
 
-        // Glow Layer removed as requested
+            // Handle load error
+            this.scene.load.once('loaderror', (file: Phaser.Loader.File) => {
+                if (file.key === key) {
+                    console.error(`Failed to load SVG: ${path}`);
+                    resolve(null);
+                }
+            });
 
-        // 2. Core Layer
-        const coreGfx = this.scene.make.graphics({}, false);
-        if (spriteDef.layers) {
-            for (const layer of spriteDef.layers) {
-                coreGfx.lineStyle(layer.lineWidth ?? 2, parseInt(layer.color, 16), layer.alpha ?? 1);
-                drawOnGraphics(coreGfx, layer.points);
-            }
-        } else if (spriteDef.points) {
-            coreGfx.lineStyle(spriteDef.lineWidth || 2, parseInt(spriteDef.color || '0xffffff', 16), 1);
-            drawOnGraphics(coreGfx, spriteDef.points);
+            // Start the loader
+            this.scene.load.start();
+        });
+    }
+
+    /**
+     * Preload all unique sprites for a level
+     * @param enemies - Array of enemy spawns from level data
+     */
+    async preloadSprites(enemies: EnemySpawn[]): Promise<void> {
+        // Get unique sprite IDs (scale is applied at spawn time, not load time)
+        const uniqueIds = new Set<string>();
+        for (const enemy of enemies) {
+            uniqueIds.add(enemy.id);
         }
-        container.add(coreGfx);
 
-        // Snapshot the container to a texture
-        // We need to ensure the container bounds cover the graphics
-        // Since graphics are centered around 0,0, we render it centered in the texture
-        const texture = this.scene.add.renderTexture(0, 0, size, size);
+        // Load all unique sprites
+        const loadPromises: Promise<string | null>[] = [];
+        for (const id of uniqueIds) {
+            loadPromises.push(this.loadSVGSprite(id));
+        }
 
-        // Center the container in the texture
-        container.setPosition(center, center);
+        await Promise.all(loadPromises);
+        console.log(`Preloaded ${loadPromises.length} unique sprite textures`);
+    }
 
-        texture.draw(container);
-        texture.saveTexture(key); // Register in TextureManager
-
-        // Cleanup
-        container.destroy();
-        texture.destroy(); // destroying the RenderTexture object, but the key remains in TextureManager
-
-        return key;
+    /**
+     * Get the texture key for a sprite
+     */
+    getTextureKey(id: string): string {
+        return `sprite_${id}`;
     }
 }
+

@@ -1,0 +1,22 @@
+<svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="bidirectionalGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="blur" />
+    </filter>
+  </defs>
+
+  <g transform="translate(10, 10)">
+      
+      <rect x="0" y="0" width="20" height="20" 
+            fill="none" 
+            stroke="red" 
+            stroke-width="2" 
+            filter="url(#bidirectionalGlow)" 
+            opacity="1.0" />
+
+      <rect x="0.5" y="0.5" width="19" height="19" 
+            fill="none" 
+            stroke="white" 
+            stroke-width="1" />
+  </g>
+</svg>
