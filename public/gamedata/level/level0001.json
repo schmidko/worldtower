@@ -8,7 +8,7 @@
                 "time": 1,
                 "angle": 0,
                 "scale": 1,
-                "speed": 15
+                "speed": 20
             },
             {
                 "id": "s001",
@@ -24,7 +24,7 @@
                 "time": 3,
                 "angle": 90,
                 "scale": 2,
-                "speed": 20
+                "speed": 30
             }
         ]
     }
