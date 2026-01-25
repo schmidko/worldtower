@@ -17,18 +17,27 @@ export class GameScene extends Phaser.Scene {
     private enemies: Phaser.GameObjects.Image[] = [];
     private bullets: Bullet[] = [];
     private lastFired: number = 0;
+    private levelText: Phaser.GameObjects.Text | null = null;
+
+    // Level Progression State
+    private currentLevel: number = 1;
+    private totalEnemiesInLevel: number = 0;
+    private spawnedEnemiesCount: number = 0;
+    private levelInProgress: boolean = false;
 
     constructor() {
         super('GameScene');
+        this.levelLoader = new LevelLoader(this);
+    }
+
+    preload() {
+        // Load tower asset
+        this.load.image('tower', 'assets/tower.png');
     }
 
     create() {
-        console.log('GameScene create() called');
-        this.levelLoader = new LevelLoader(this);
-
-        // Center camera on the fixed world
+        // Setup camera
         this.centerCamera();
-        console.log('Camera centered');
 
         // Recenter camera on resize
         this.scale.on('resize', this.centerCamera, this);
@@ -36,35 +45,82 @@ export class GameScene extends Phaser.Scene {
         // Draw central tower
         this.createTower();
 
-        // Load Level 1
-        this.loadLevelData(1);
+        // Create UI
+        this.createUI();
+
+        // Start Game
+        this.startLevel(1);
     }
 
-    async loadLevelData(levelNum: number) {
-        if (!this.levelLoader) return;
+    async startLevel(levelNum: number) {
+        // Stop level progress check during loading
+        this.levelInProgress = false;
 
-        const levelData = await this.levelLoader.loadLevel(levelNum);
-        if (levelData && levelData.enemy) {
+        // Reset state immediately to prevent stale triggers
+        this.spawnedEnemiesCount = 0;
+        this.totalEnemiesInLevel = 0; // Prevent completion check
+
+        const success = await this.loadLevelData(levelNum);
+
+        if (success) {
+            this.currentLevel = levelNum;
+            this.levelInProgress = true;
+        } else {
+            console.log(`Level ${levelNum} not found. Looping back to Level 1.`);
+            if (levelNum !== 1) {
+                // Wait a bit before looping to avoid tight loop in case of error
+                this.time.delayedCall(1000, () => {
+                    this.startLevel(1);
+                });
+            }
+        }
+    }
+
+    async loadLevelData(levelNum: number): Promise<boolean> {
+        // 1. Load Level JSON
+        try {
+            const levelData = await this.levelLoader!.loadLevel(levelNum);
+
+            if (!levelData || !levelData.enemy) {
+                return false;
+            }
+
             console.log(`Loaded Level ${levelData.level} with ${levelData.enemy.length} enemies`);
 
-            // 1. Preload all required SVG sprites
-            await this.levelLoader.preloadSprites(levelData.enemy);
+            // Reset Counters
+            this.totalEnemiesInLevel = levelData.enemy.length;
+            this.spawnedEnemiesCount = 0;
 
-            console.log(`Starting Level ${levelData.level}...`);
+            // Update UI
+            if (this.levelText) {
+                this.levelText.setText(`Level: ${levelData.level}`);
+            }
 
-            // 2. Schedule Spawns
-            for (const enemySpawn of levelData.enemy) {
-                // time is in seconds, convert to ms
-                const delay = enemySpawn.time * 1000;
+            // 2. Preload all required SVG sprites
+            await this.levelLoader!.preloadSprites(levelData.enemy);
 
-                this.time.delayedCall(delay, () => {
+            // 3. Schedule Enemy Spawns
+            levelData.enemy.forEach(enemySpawn => {
+                const spawnDelay = enemySpawn.time * 1000; // Convert seconds to ms
+
+                this.time.delayedCall(spawnDelay, () => {
                     const textureKey = this.levelLoader!.getTextureKey(enemySpawn.id);
                     const scale = enemySpawn.scale || 1;
                     const lp = enemySpawn.lp || DefaultPlayerStats.lp;
                     const spinSpeed = (enemySpawn.spinper10second || 0) / 10;
+
                     this.spawnEnemy(enemySpawn.angle, textureKey, scale, enemySpawn.speed || 0, lp, spinSpeed);
+
+                    // Increment spawned count
+                    this.spawnedEnemiesCount++;
                 });
-            }
+            });
+
+            return true;
+
+        } catch (error) {
+            console.warn(`Failed to load level ${levelNum}:`, error);
+            return false;
         }
     }
 
@@ -214,66 +270,84 @@ export class GameScene extends Phaser.Scene {
         for (let i = this.bullets.length - 1; i >= 0; i--) {
             const bullet = this.bullets[i];
 
-            if (!bullet.active) {
-                this.bullets.splice(i, 1);
-                continue;
-            }
-
             // Move bullet
-            const moveDist = bulletSpeed * (delta / 1000);
-            bullet.graphic.x += bullet.vx * moveDist;
-            bullet.graphic.y += bullet.vy * moveDist;
+            bullet.graphic.x += bullet.vx * bulletSpeed * (delta / 1000);
+            bullet.graphic.y += bullet.vy * bulletSpeed * (delta / 1000);
 
             // Check collision with enemies
-            let hit = false;
-            for (let j = this.enemies.length - 1; j >= 0; j--) {
-                const enemy = this.enemies[j];
-                const dx = bullet.graphic.x - enemy.x;
-                const dy = bullet.graphic.y - enemy.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
+            if (bullet.active) {
+                let hit = false;
+                for (let j = this.enemies.length - 1; j >= 0; j--) {
+                    const enemy = this.enemies[j];
+                    if (!enemy.active) continue;
 
-                // Collision radius reduced to 10px (inner square radius) to match visual 'core'
-                if (dist < 10 * enemy.scale) {
-                    // HIT!
-                    hit = true;
+                    // Simple circular collision
+                    const dx = bullet.graphic.x - enemy.x;
+                    const dy = bullet.graphic.y - enemy.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
 
-                    // Damage Enemy
-                    const currentLp = enemy.getData('lp') as number;
-                    const newLp = currentLp - DefaultPlayerStats.damage;
-                    enemy.setData('lp', newLp);
+                    // Collision radius reduced to 10px (inner square radius) to match visual 'core'
+                    if (dist < 10 * enemy.scale) {
+                        // HIT!
+                        hit = true;
 
-                    // Visual Hit Feedback: Flash/Darken (Tint)
-                    enemy.setTint(0x555555);
-                    this.time.delayedCall(100, () => {
-                        if (enemy && enemy.active) {
-                            enemy.clearTint();
+                        // Damage Enemy
+                        const currentLp = enemy.getData('lp') as number;
+                        const newLp = currentLp - DefaultPlayerStats.damage;
+                        enemy.setData('lp', newLp);
+
+                        // Visual Hit Feedback: Flash/Darken (Tint)
+                        enemy.setTint(0x555555);
+                        this.time.delayedCall(100, () => {
+                            if (enemy && enemy.active) {
+                                enemy.clearTint();
+                            }
+                        });
+
+                        console.log(`Enemy hit! LP: ${newLp}`);
+
+                        if (newLp <= 0) {
+                            console.log('Enemy destroyed!');
+                            enemy.destroy();
+                            this.enemies.splice(j, 1);
                         }
-                    });
-
-                    console.log(`Enemy hit! LP: ${newLp}`);
-
-                    if (newLp <= 0) {
-                        enemy.destroy();
-                        this.enemies.splice(j, 1);
-                        console.log('Enemy destroyed!');
+                        break; // Bullet hits one enemy
                     }
+                }
 
-                    // Destroy Bullet
+                if (hit) {
                     bullet.graphic.destroy();
                     bullet.active = false;
-                    break; // Bullet hits only one enemy
+                    this.bullets.splice(i, 1);
+                    continue; // Next bullet
                 }
             }
 
-            // Cleanup bullets that fly too far (e.g. out of world bounds)
-            if (!hit) {
+            // Cleanup if out of bounds (simple range check)
+            if (bullet.active) {
                 const dx = bullet.graphic.x - WORLD_CENTER_X;
                 const dy = bullet.graphic.y - WORLD_CENTER_Y;
                 if (Math.sqrt(dx * dx + dy * dy) > WORLD_WIDTH) { // Safe cleanup distance
                     bullet.graphic.destroy();
                     bullet.active = false;
+                    this.bullets.splice(i, 1);
                 }
             }
+        }
+
+        // --- Level Progression Check ---
+        if (this.levelInProgress &&
+            this.spawnedEnemiesCount > 0 &&
+            this.spawnedEnemiesCount === this.totalEnemiesInLevel &&
+            this.enemies.length === 0) {
+
+            console.log("Level Complete! Starting next level...");
+            this.levelInProgress = false; // Prevent multiple triggers
+
+            // Wait 2 seconds before starting next level
+            this.time.delayedCall(2000, () => {
+                this.startLevel(this.currentLevel + 1);
+            });
         }
     }
 
@@ -298,5 +372,18 @@ export class GameScene extends Phaser.Scene {
             vy: dirY,
             active: true
         });
+    }
+
+    createUI() {
+        // Level Indicator (Bottom Left)
+        // Using 'Press Start 2P' font for retro look
+        const yPos = this.cameras.main.height - 40;
+        this.levelText = this.add.text(20, yPos, 'Level: 0', {
+            fontSize: '16px',
+            color: '#ffffff',
+            fontFamily: '"Press Start 2P", Arial, sans-serif'
+        });
+        this.levelText.setScrollFactor(0); // Fix to camera
+        this.levelText.setDepth(9999); // Ensure on top
     }
 }
