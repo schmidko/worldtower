@@ -1,0 +1,124 @@
+[
+    {
+        "level": 9,
+        "enemy": [
+            {
+                "id": "s004",
+                "lp": 268,
+                "time": 2.2,
+                "angle": 231,
+                "scale": 2,
+                "speed": 15,
+                "spinper10second": 0.5
+            },
+            {
+                "id": "s001",
+                "lp": 107,
+                "time": 3.2,
+                "angle": 97,
+                "scale": 1,
+                "speed": 30,
+                "spinper10second": 2
+            },
+            {
+                "id": "s001",
+                "lp": 107,
+                "time": 3.8,
+                "angle": 210,
+                "scale": 1,
+                "speed": 30,
+                "spinper10second": 2
+            },
+            {
+                "id": "s004",
+                "lp": 268,
+                "time": 5.7,
+                "angle": 300,
+                "scale": 2,
+                "speed": 15,
+                "spinper10second": 0.5
+            },
+            {
+                "id": "s003",
+                "lp": 64,
+                "time": 7.3,
+                "angle": 340,
+                "scale": 0.8,
+                "speed": 45,
+                "spinper10second": 5
+            },
+            {
+                "id": "s001",
+                "lp": 107,
+                "time": 8.4,
+                "angle": 170,
+                "scale": 1,
+                "speed": 30,
+                "spinper10second": 2
+            },
+            {
+                "id": "s003",
+                "lp": 64,
+                "time": 9.2,
+                "angle": 61,
+                "scale": 0.8,
+                "speed": 45,
+                "spinper10second": 5
+            },
+            {
+                "id": "s002",
+                "lp": 161,
+                "time": 10.5,
+                "angle": 293,
+                "scale": 1.5,
+                "speed": 24,
+                "spinper10second": 1
+            },
+            {
+                "id": "s002",
+                "lp": 161,
+                "time": 11.4,
+                "angle": 300,
+                "scale": 1.5,
+                "speed": 24,
+                "spinper10second": 1
+            },
+            {
+                "id": "s004",
+                "lp": 268,
+                "time": 12,
+                "angle": 295,
+                "scale": 2,
+                "speed": 15,
+                "spinper10second": 0.5
+            },
+            {
+                "id": "s001",
+                "lp": 107,
+                "time": 13,
+                "angle": 9,
+                "scale": 1,
+                "speed": 30,
+                "spinper10second": 2
+            },
+            {
+                "id": "s003",
+                "lp": 64,
+                "time": 14.8,
+                "angle": 291,
+                "scale": 0.8,
+                "speed": 45,
+                "spinper10second": 5
+            },
+            {
+                "id": "s003",
+                "lp": 64,
+                "time": 15.5,
+                "angle": 35,
+                "scale": 0.8,
+                "speed": 45,
+                "spinper10second": 5
+            }
+        ]
+    }
+]

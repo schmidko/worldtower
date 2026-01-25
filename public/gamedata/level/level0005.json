@@ -1,0 +1,88 @@
+[
+    {
+        "level": 5,
+        "enemy": [
+            {
+                "id": "s004",
+                "lp": 183,
+                "time": 1.8,
+                "angle": 257,
+                "scale": 2,
+                "speed": 15,
+                "spinper10second": 0.5
+            },
+            {
+                "id": "s003",
+                "lp": 44,
+                "time": 3.6,
+                "angle": 73,
+                "scale": 0.8,
+                "speed": 45,
+                "spinper10second": 5
+            },
+            {
+                "id": "s001",
+                "lp": 73,
+                "time": 4.8,
+                "angle": 39,
+                "scale": 1,
+                "speed": 30,
+                "spinper10second": 2
+            },
+            {
+                "id": "s004",
+                "lp": 183,
+                "time": 6.1,
+                "angle": 119,
+                "scale": 2,
+                "speed": 15,
+                "spinper10second": 0.5
+            },
+            {
+                "id": "s004",
+                "lp": 183,
+                "time": 7,
+                "angle": 115,
+                "scale": 2,
+                "speed": 15,
+                "spinper10second": 0.5
+            },
+            {
+                "id": "s001",
+                "lp": 73,
+                "time": 8.7,
+                "angle": 54,
+                "scale": 1,
+                "speed": 30,
+                "spinper10second": 2
+            },
+            {
+                "id": "s004",
+                "lp": 183,
+                "time": 9.5,
+                "angle": 202,
+                "scale": 2,
+                "speed": 15,
+                "spinper10second": 0.5
+            },
+            {
+                "id": "s001",
+                "lp": 73,
+                "time": 10.9,
+                "angle": 301,
+                "scale": 1,
+                "speed": 30,
+                "spinper10second": 2
+            },
+            {
+                "id": "s001",
+                "lp": 73,
+                "time": 12.6,
+                "angle": 48,
+                "scale": 1,
+                "speed": 30,
+                "spinper10second": 2
+            }
+        ]
+    }
+]

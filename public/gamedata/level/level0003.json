@@ -1,0 +1,70 @@
+[
+    {
+        "level": 3,
+        "enemy": [
+            {
+                "id": "s002",
+                "lp": 91,
+                "time": 1.7,
+                "angle": 343,
+                "scale": 1.5,
+                "speed": 24,
+                "spinper10second": 1
+            },
+            {
+                "id": "s003",
+                "lp": 36,
+                "time": 3,
+                "angle": 183,
+                "scale": 0.8,
+                "speed": 45,
+                "spinper10second": 5
+            },
+            {
+                "id": "s001",
+                "lp": 61,
+                "time": 4.7,
+                "angle": 85,
+                "scale": 1,
+                "speed": 30,
+                "spinper10second": 2
+            },
+            {
+                "id": "s002",
+                "lp": 91,
+                "time": 5.4,
+                "angle": 14,
+                "scale": 1.5,
+                "speed": 24,
+                "spinper10second": 1
+            },
+            {
+                "id": "s002",
+                "lp": 91,
+                "time": 7.2,
+                "angle": 168,
+                "scale": 1.5,
+                "speed": 24,
+                "spinper10second": 1
+            },
+            {
+                "id": "s002",
+                "lp": 91,
+                "time": 7.9,
+                "angle": 190,
+                "scale": 1.5,
+                "speed": 24,
+                "spinper10second": 1
+            },
+            {
+                "id": "s002",
+                "lp": 91,
+                "time": 9.1,
+                "angle": 194,
+                "scale": 1.5,
+                "speed": 24,
+                "spinper10second": 1
+            }
+        ]
+    }
+]

@@ -1,0 +1,79 @@
+[
+    {
+        "level": 4,
+        "enemy": [
+            {
+                "id": "s004",
+                "lp": 166,
+                "time": 1.9,
+                "angle": 295,
+                "scale": 2,
+                "speed": 15,
+                "spinper10second": 0.5
+            },
+            {
+                "id": "s002",
+                "lp": 100,
+                "time": 3.3,
+                "angle": 16,
+                "scale": 1.5,
+                "speed": 24,
+                "spinper10second": 1
+            },
+            {
+                "id": "s001",
+                "lp": 67,
+                "time": 4.1,
+                "angle": 12,
+                "scale": 1,
+                "speed": 30,
+                "spinper10second": 2
+            },
+            {
+                "id": "s004",
+                "lp": 166,
+                "time": 6.1,
+                "angle": 131,
+                "scale": 2,
+                "speed": 15,
+                "spinper10second": 0.5
+            },
+            {
+                "id": "s003",
+                "lp": 40,
+                "time": 7.2,
+                "angle": 52,
+                "scale": 0.8,
+                "speed": 45,
+                "spinper10second": 5
+            },
+            {
+                "id": "s003",
+                "lp": 40,
+                "time": 8.2,
+                "angle": 326,
+                "scale": 0.8,
+                "speed": 45,
+                "spinper10second": 5
+            },
+            {
+                "id": "s002",
+                "lp": 100,
+                "time": 9.7,
+                "angle": 72,
+                "scale": 1.5,
+                "speed": 24,
+                "spinper10second": 1
+            },
+            {
+                "id": "s001",
+                "lp": 67,
+                "time": 10.3,
+                "angle": 319,
+                "scale": 1,
+                "speed": 30,
+                "spinper10second": 2
+            }
+        ]
+    }
+]
