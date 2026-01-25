@@ -61,13 +61,14 @@ export class GameScene extends Phaser.Scene {
                     const textureKey = this.levelLoader!.getTextureKey(enemySpawn.id);
                     const scale = enemySpawn.scale || 1;
                     const lp = enemySpawn.lp || DefaultPlayerStats.lp;
-                    this.spawnEnemy(enemySpawn.angle, textureKey, scale, enemySpawn.speed || 0, lp);
+                    const spinSpeed = (enemySpawn.spinper10second || 0) / 10;
+                    this.spawnEnemy(enemySpawn.angle, textureKey, scale, enemySpawn.speed || 0, lp, spinSpeed);
                 });
             }
         }
     }
 
-    spawnEnemy(angleDeg: number, textureKey: string, scale: number = 1, speed: number = 0, lp: number = 100) {
+    spawnEnemy(angleDeg: number, textureKey: string, scale: number = 1, speed: number = 0, lp: number = 100, spinSpeed: number = 0) {
         // Convert angle to radians (0 is right, 90 is down, -90 is up)
         const angleRad = angleDeg * (Math.PI / 180);
 
@@ -98,8 +99,10 @@ export class GameScene extends Phaser.Scene {
         // Create enemy image from pre-loaded SVG texture
         const enemy = this.add.image(x, y, textureKey);
         enemy.setScale(scale); // Apply scale from level data
+        enemy.setScale(scale); // Apply scale from level data
         enemy.setData('speed', speed);
         enemy.setData('lp', lp);
+        enemy.setData('spinSpeed', spinSpeed);
 
         this.enemies.push(enemy);
     }
@@ -175,6 +178,11 @@ export class GameScene extends Phaser.Scene {
                     enemy.y += moveY;
                 }
             }
+
+            const spinSpeed = enemy.getData('spinSpeed') as number;
+            if (spinSpeed !== 0) {
+                enemy.angle += spinSpeed * 360 * (delta / 1000);
+            }
         }
 
         // --- Tower Shooting Logic ---
@@ -233,6 +241,15 @@ export class GameScene extends Phaser.Scene {
                     const currentLp = enemy.getData('lp') as number;
                     const newLp = currentLp - DefaultPlayerStats.damage;
                     enemy.setData('lp', newLp);
+
+                    // Visual Hit Feedback: Flash/Darken (Tint)
+                    enemy.setTint(0x555555);
+                    this.time.delayedCall(100, () => {
+                        if (enemy && enemy.active) {
+                            enemy.clearTint();
+                        }
+                    });
+
                     console.log(`Enemy hit! LP: ${newLp}`);
 
                     if (newLp <= 0) {

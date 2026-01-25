@@ -8,6 +8,7 @@ export interface EnemySpawn {
     angle: number;
     scale?: number;
     speed?: number;
+    spinper10second?: number;
 }
 
 export interface LevelData {
