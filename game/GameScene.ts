@@ -308,6 +308,7 @@ export class GameScene extends Phaser.Scene {
 
                         if (newLp <= 0) {
                             console.log('Enemy destroyed!');
+                            this.createExplosion(enemy.x, enemy.y);
                             enemy.destroy();
                             this.enemies.splice(j, 1);
                         }
@@ -385,5 +386,33 @@ export class GameScene extends Phaser.Scene {
         });
         this.levelText.setScrollFactor(0); // Fix to camera
         this.levelText.setDepth(9999); // Ensure on top
+    }
+
+    createExplosion(x: number, y: number) {
+        const particleCount = 10;
+        for (let i = 0; i < particleCount; i++) {
+            // Create white circle (radius 2.5 = diameter 5)
+            const particle = this.add.circle(x, y, 2.5, 0xffffff);
+            particle.setDepth(200); // Above bullets/enemies
+
+            // Random angle and speed
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 25; // Reduced from 50 (slower expansion)
+
+            const targetX = x + Math.cos(angle) * speed;
+            const targetY = y + Math.sin(angle) * speed;
+
+            this.tweens.add({
+                targets: particle,
+                x: targetX,
+                y: targetY,
+                alpha: 0,
+                duration: 1000, // Increased from 500ms to 1000ms (longer fade)
+                ease: 'Power2',
+                onComplete: () => {
+                    particle.destroy();
+                }
+            });
+        }
     }
 }
