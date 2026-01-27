@@ -25,6 +25,10 @@ export class GameScene extends Phaser.Scene {
     private spawnedEnemiesCount: number = 0;
     private levelInProgress: boolean = false;
 
+    // Player State
+    private playerCredits: number = DefaultPlayerStats.credits;
+    private creditsText: Phaser.GameObjects.Text | null = null;
+
     constructor() {
         super('GameScene');
         this.levelLoader = new LevelLoader(this);
@@ -55,6 +59,17 @@ export class GameScene extends Phaser.Scene {
     async startLevel(levelNum: number) {
         // Stop level progress check during loading
         this.levelInProgress = false;
+
+        // Cleanup previous level state
+        this.time.removeAllEvents(); // Stop pending spawns
+
+        // Clear existing enemies
+        this.enemies.forEach(e => e.destroy());
+        this.enemies = [];
+
+        // Clear existing bullets
+        this.bullets.forEach(b => b.graphic.destroy());
+        this.bullets = [];
 
         // Reset state immediately to prevent stale triggers
         this.spawnedEnemiesCount = 0;
@@ -108,8 +123,9 @@ export class GameScene extends Phaser.Scene {
                     const scale = enemySpawn.scale || 1;
                     const lp = enemySpawn.lp || DefaultPlayerStats.lp;
                     const spinSpeed = (enemySpawn.spinper10second || 0) / 10;
-
-                    this.spawnEnemy(enemySpawn.angle, textureKey, scale, enemySpawn.speed || 0, lp, spinSpeed);
+                    const enemy = this.spawnEnemy(enemySpawn.angle, textureKey, scale, enemySpawn.speed || 0, lp, spinSpeed);
+                    // Store Max LP for credit reward
+                    enemy.setData('maxLp', lp);
 
                     // Increment spawned count
                     this.spawnedEnemiesCount++;
@@ -124,43 +140,23 @@ export class GameScene extends Phaser.Scene {
         }
     }
 
-    spawnEnemy(angleDeg: number, textureKey: string, scale: number = 1, speed: number = 0, lp: number = 100, spinSpeed: number = 0) {
-        // Convert angle to radians (0 is right, 90 is down, -90 is up)
-        const angleRad = angleDeg * (Math.PI / 180);
+    spawnEnemy(angleDeg: number, texture: string, scale: number, speed: number, lp: number, spinSpeed: number) {
+        const rad = Phaser.Math.DegToRad(angleDeg);
+        const distance = 600; // Start spawn distance
 
-        // Calculate spawn position at the edge of the screen
-        const margin = 0;
-        const w = WORLD_WIDTH;
-        const h = WORLD_HEIGHT;
+        const startX = WORLD_CENTER_X + Math.cos(rad) * distance;
+        const startY = WORLD_CENTER_Y + Math.sin(rad) * distance;
 
-        // Center position
-        const cx = WORLD_CENTER_X;
-        const cy = WORLD_CENTER_Y;
+        const enemy = this.add.image(startX, startY, texture);
+        enemy.setScale(scale);
 
-        // Direction vector
-        const dx = Math.cos(angleRad);
-        const dy = Math.sin(angleRad);
-
-        // Ray vs AABB Intersection (Center to Edge)
-        let t = Infinity;
-
-        if (dx > 0) t = Math.min(t, (w + margin - cx) / dx);
-        if (dx < 0) t = Math.min(t, (-margin - cx) / dx);
-        if (dy > 0) t = Math.min(t, (h + margin - cy) / dy);
-        if (dy < 0) t = Math.min(t, (-margin - cy) / dy);
-
-        const x = cx + dx * t;
-        const y = cy + dy * t;
-
-        // Create enemy image from pre-loaded SVG texture
-        const enemy = this.add.image(x, y, textureKey);
-        enemy.setScale(scale); // Apply scale from level data
-        enemy.setScale(scale); // Apply scale from level data
-        enemy.setData('speed', speed);
         enemy.setData('lp', lp);
+        enemy.setData('speed', speed);
         enemy.setData('spinSpeed', spinSpeed);
+        // maxLp is set by caller or defaults to lp here if needed, but caller handles it for precision
 
         this.enemies.push(enemy);
+        return enemy; // Return enemy for further data setting
     }
 
     createTower() {
@@ -308,6 +304,17 @@ export class GameScene extends Phaser.Scene {
 
                         if (newLp <= 0) {
                             console.log('Enemy destroyed!');
+
+                            // Award Credits
+                            const reward = enemy.getData('maxLp') as number || 0;
+                            this.playerCredits += reward;
+                            if (this.creditsText) {
+                                this.creditsText.setText(`Credits: ${this.playerCredits}`);
+                            }
+
+                            // Show Floating Credit Text
+                            this.showFloatingText(enemy.x, enemy.y, `${reward}$`);
+
                             this.createExplosion(enemy.x, enemy.y);
                             enemy.destroy();
                             this.enemies.splice(j, 1);
@@ -386,6 +393,16 @@ export class GameScene extends Phaser.Scene {
         });
         this.levelText.setScrollFactor(0); // Fix to camera
         this.levelText.setDepth(9999); // Ensure on top
+
+        // Credits Indicator (Bottom Right)
+        this.creditsText = this.add.text(this.cameras.main.width - 20, yPos, `Credits: ${this.playerCredits}`, {
+            fontSize: '16px',
+            color: '#ffffff',
+            fontFamily: '"Press Start 2P", Arial, sans-serif'
+        });
+        this.creditsText.setOrigin(1, 0); // Align right
+        this.creditsText.setScrollFactor(0);
+        this.creditsText.setDepth(9999);
     }
 
     createExplosion(x: number, y: number) {
@@ -414,5 +431,27 @@ export class GameScene extends Phaser.Scene {
                 }
             });
         }
+    }
+
+    showFloatingText(x: number, y: number, text: string) {
+        const floatingText = this.add.text(x, y, text, {
+            fontSize: '14px',
+            color: '#00ff00', // Green for money
+            fontStyle: 'bold',
+            fontFamily: '"Press Start 2P", Arial, sans-serif'
+        });
+        floatingText.setOrigin(0.5, 0.5);
+        floatingText.setDepth(300); // Above particles
+
+        this.tweens.add({
+            targets: floatingText,
+            y: y - 50, // Move up 50px
+            alpha: 0,
+            duration: 1000,
+            ease: 'Power1',
+            onComplete: () => {
+                floatingText.destroy();
+            }
+        });
     }
 }

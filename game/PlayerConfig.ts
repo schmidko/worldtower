@@ -6,7 +6,7 @@ export interface PlayerStats {
     bulletpersecond: number;
     bulletdistance: number;
     bulletspeed: number;
-
+    credits: number;
 }
 
 export const DefaultPlayerStats: PlayerStats = {
@@ -16,5 +16,6 @@ export const DefaultPlayerStats: PlayerStats = {
     critdamage: 150,
     bulletpersecond: 2,
     bulletdistance: 300,
-    bulletspeed: 200
+    bulletspeed: 200,
+    credits: 0
 };
